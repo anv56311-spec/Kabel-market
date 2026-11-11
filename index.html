@@ -1,365 +1,343 @@
-[11.11.2026 21:46] Admin: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#15243b">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101827">
 <title>KABEL MARKET</title>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f3f5f9;color:#172033;font-family:Arial,sans-serif}
-header{background:#15243b;color:white;padding:18px;position:sticky;top:0;z-index:5}
-header h2{margin:0;font-size:23px}
-header p{margin:6px 0 0;color:#cbd5e1;font-size:12px}
-main{padding:14px;max-width:750px;margin:auto}
-input,textarea,select{width:100%;padding:13px;margin:6px 0;border:1px solid #dbe1eb;border-radius:9px;font-size:15px}
-button{border:0;background:#2563eb;color:white;padding:12px;border-radius:9px;cursor:pointer}
-button:disabled{opacity:.5}
-.primary{width:100%;margin:6px 0}
-.search{margin-bottom:12px}
-.categories{display:flex;gap:8px;overflow:auto;padding:5px 0 14px}
-.categories button{white-space:nowrap;background:white;color:#172033}
-.categories button.active{background:#2563eb;color:white}
-.products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.product{background:white;border-radius:14px;overflow:hidden;padding-bottom:12px}
-.product img{width:100%;height:145px;object-fit:contain;background:white}
-.product h3{font-size:14px;margin:9px}
-.product p{font-size:12px;color:#64748b;margin:9px}
-.price{font-size:17px;font-weight:bold;color:#2563eb;margin:9px}
-.product button{width:calc(100% - 18px);margin:0 9px}
-.section{background:white;padding:15px;border-radius:14px;margin-top:15px}
-.section h3{margin-top:0}
-.hidden{display:none!important}
-.cartline{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #eee;font-size:13px}
-.smallbtn{padding:7px 10px;background:#e7edfa;color:#172033}
-.adminbtn{background:#172033;margin-top:15px}
-.admin-item{padding:10px 0;border-bottom:1px solid #eee}
-.admin-item button{margin:4px 3px 0 0}
-.muted{color:#64748b;font-size:12px}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f5f9;color:#172033}
+header{background:#101827;color:white;padding:18px}
+header h2{margin:0}
+header p{margin:6px 0 0;color:#cbd5e1}
+.search{padding:15px}
+input{width:100%;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px}
+.categories{display:flex;gap:8px;overflow:auto;padding:0 15px 15px}
+.categories button{border:0;background:white;padding:11px 16px;border-radius:20px;white-space:nowrap}
+.categories button.active{background:#172b4d;color:white}
+.products{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:0 12px 100px}
+.product{background:white;border-radius:14px;padding:10px;overflow:hidden}
+.product img{width:100%;height:135px;object-fit:contain;background:#f8fafc;border-radius:10px}
+.product h3{font-size:15px;margin:10px 0 6px}
+.price{font-weight:bold;color:#087b45;margin:7px 0}
+.product button,.mainbtn{width:100%;border:0;background:#1769e0;color:white;padding:12px;border-radius:10px;font-weight:bold}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:white;padding:12px;box-shadow:0 -2px 12px #0001}
+.bottom button{width:100%;padding:15px;background:#101827;color:white;border:0;border-radius:12px;font-size:16px}
+#cartPanel{display:none;background:white;padding:18px;margin:12px;border-radius:15px}
+.cartitem{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee}
+.modal{display:none;position:fixed;inset:0;background:#0008;z-index:10;align-items:center;justify-content:center;padding:15px}
+.modalbox{background:white;width:100%;max-width:400px;padding:20px;border-radius:16px}
+.modalbox input{margin:7px 0}
+.close{float:right;border:0;background:#eee;padding:8px;border-radius:8px}
+#message{text-align:center;padding:20px;color:#666}
 </style>
 </head>
+
 <body>
 
 <header>
 <h2>⚡ KABEL MARKET</h2>
-<p>Elektr mahsulotlari onlayn do‘koni</p>
+<p>Elektr mahsulotlari internet do‘koni</p>
 </header>
 
-<main>
-<input class="search" id="search" placeholder="🔍 Mahsulot qidirish...">
-
-<div class="categories" id="categories">
-<button class="active" data-cat="Hammasi">Hammasi</button>
-<button data-cat="1P">1P</button>
-<button data-cat="2P">2P</button>
-<button data-cat="3P">3P</button>
-<button data-cat="Boshqa">Boshqa</button>
+<div class="search">
+<input id="search" placeholder="🔎 Mahsulot qidirish..." oninput="renderProducts()">
 </div>
 
-<div class="products" id="products">Mahsulotlar yuklanmoqda...</div>
+<div class="categories" id="categories"></div>
 
-<div class="section">
+<div id="message">Mahsulotlar yuklanmoqda...</div>
+<div class="products" id="products"></div>
+
+<div id="cartPanel">
 <h3>🛒 Savatcha</h3>
-<div id="cart">Savatcha bo‘sh</div>
+<div id="cartItems"></div>
 <h3 id="total">Jami: 0 so‘m</h3>
-<input id="customer" placeholder="Ismingiz">
-<input id="phone" type="tel" placeholder="Telefon raqamingiz">
-<input id="address" placeholder="Manzilingiz">
-<button class="primary" onclick="checkout()">Buyurtma berish</button>
+<button class="mainbtn" onclick="openOrder()">Buyurtma berish</button>
 </div>
 
-<button class="primary adminbtn" onclick="showAdmin()">⚙️ ADMIN PANEL</button>
-
-<div id="admin" class="section hidden">
-<h3>🔐 Admin panel</h3>
-
-<div id="login">
-<input id="email" type="email" placeholder="Admin email">
-<input id="password" type="password" placeholder="Parol">
-<button class="primary" onclick="loginAdmin()">Kirish</button>
+<div class="bottom">
+<button onclick="toggleCart()">🛒 Savatcha (<span id="cartCount">0</span>)</button>
 </div>
 
-<div id="adminContent" class="hidden">
-<h3>➕ Mahsulot qo‘shish</h3>
-<input id="pname" placeholder="Mahsulot nomi">
-<select id="pcat">
-<option value="1P">1P</option>
-<option value="2P">2P</option>
-<option value="3P">3P</option>
-<option value="Boshqa">Boshqa</option>
-</select>
-<input id="pprice" type="number" min="1" placeholder="Narxi">
-<input id="pimage" placeholder="Rasm URL manzili">
-<textarea id="pdesc" placeholder="Mahsulot haqida"></textarea>
-<button class="primary" onclick="addProduct()">Mahsulotni saqlash</button>
-
-<hr>
-<h3>📦 Mahsulotlarni boshqarish</h3>
-<div id="manage"></div>
-
-<hr>
-<h3>🧾 Buyurtmalar</h3>
-<div id="orders"></div>
-
-<button class="primary" onclick="logoutAdmin()">Chiqish</button>
+<div class="modal" id="orderModal">
+<div class="modalbox">
+<button class="close" onclick="closeOrder()">✕</button>
+<h3>Buyurtma berish</h3>
+<input id="customerName" placeholder="Ismingiz">
+<input id="customerPhone" placeholder="Telefon raqamingiz">
+<input id="customerAddress" placeholder="Manzilingiz">
+<button class="mainbtn" onclick="sendOrder()">Buyurtmani yuborish</button>
+<p id="orderMessage"></p>
 </div>
 </div>
-</main>
-[11.11.2026 21:46] Admin: <script>
-const SUPABASE_URL="https://ncfmpgqdcjhsoifijnxr.supabase.co";
-const SUPABASE_KEY="sb_publishable_L1BOMVyFFWqEJUFjbALqig_V8oO5kHz";
 
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+<script>
+const SUPABASE_URL = "https://ncfmpgqdcjhsoifijnxr.supabase.co";
+const SUPABASE_KEY = "sb_publishable_L1BOMVyFFWqEJUFjbALqig_V8oO5kHz";
 
-let products=[];
-let cart=[];
-let category="Hammasi";
-let editingId=null;
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
-const $=id=>document.getElementById(id);
-const money=n=>Number(n||0).toLocaleString("uz-UZ")+" so‘m";
-
-function esc(v){
-return String(v??"").replace(/[&<>"']/g,c=>({
-"&":"&amp;","<":"&lt;",">":"&gt;",
-'"':"&quot;","'":"&#39;"
-}[c]));
+const tg = window.Telegram?.WebApp;
+if(tg){
+  tg.ready();
+  tg.expand();
 }
 
-async function loadProducts(){
-$("products").textContent="Mahsulotlar yuklanmoqda...";
-const {data,error}=await db.from("products")
-.select("*").order("created_at",{ascending:false});
+let products = [];
+let categories = [];
+let cart = [];
+let selectedCategory = "all";
 
-if(error){
-$("products").textContent="Xatolik: "+error.message;
-return;
+function money(value){
+  return Number(value || 0).toLocaleString("uz-UZ") + " so‘m";
 }
-products=data||[];
-renderProducts();
+
+async function loadData(){
+  try{
+    const [p,c] = await Promise.all([
+      db.from("products").select("*").order("id",{ascending:false}),
+      db.from("categories").select("*").order("id")
+    ]);
+
+    if(p.error) throw p.error;
+    if(c.error) throw c.error;
+
+    products = p.data || [];
+    categories = c.data || [];
+renderCategories();
+    renderProducts();
+
+    document.getElementById("message").textContent =
+      products.length ? "" : "Hozircha mahsulot mavjud emas.";
+  }catch(error){
+    document.getElementById("message").textContent =
+      "Xatolik: " + error.message;
+  }
+}
+
+function renderCategories(){
+  const box = document.getElementById("categories");
+
+  box.innerHTML =
+    <button class="${selectedCategory==="all"?"active":""}"
+    onclick="chooseCategory('all')">Barchasi</button> +
+    categories.map(c=>
+      <button class="${String(selectedCategory)===String(c.id)?"active":""}"
+      onclick="chooseCategory('${c.id}')">
+      ${escapeHTML(c.name)}
+      </button>
+    ).join("");
+}
+
+function chooseCategory(id){
+  selectedCategory = id;
+  renderCategories();
+  renderProducts();
 }
 
 function renderProducts(){
-const s=$("search").value.trim().toLowerCase();
-const list=products.filter(p=>
-(category==="Hammasi"||p.category===category)&&
-String(p.name||"").toLowerCase().includes(s)
-);
+  const search = document.getElementById("search").value.toLowerCase();
 
-$("products").innerHTML=list.length?list.map(p=>
-<div class="product">
-${p.image?<img src="${esc(p.image)}" onerror="this.style.display='none'" alt="">:""}
-<h3>${esc(p.name)}</h3>
-<p>${esc(p.category)}</p>
-<p>${esc(p.description)}</p>
-<div class="price">${money(p.price)}</div>
-<button onclick="addCart(${Number(p.id)})">Savatchaga qo‘shish</button>
-</div>).join(""):"<p>Mahsulot topilmadi</p>";
+  const filtered = products.filter(p=>{
+    const matchName = (p.name || "").toLowerCase().includes(search);
+    const matchCategory = selectedCategory==="all" ||
+      String(p.category_id)===String(selectedCategory);
+    return matchName && matchCategory;
+  });
+
+  document.getElementById("products").innerHTML =
+    filtered.map(p=>
+      <div class="product">
+        <img src="${safeImage(p.image_url)}"
+             alt="${escapeHTML(p.name)}"
+             onerror="this.src='https://placehold.co/300x200?text=KABEL+MARKET'">
+        <h3>${escapeHTML(p.name)}</h3>
+        <div class="price">${money(p.price)}</div>
+        <p>Omborda: ${Number(p.stock || 0)}</p>
+        <button onclick="addCart(${Number(p.id)})">Savatchaga qo‘shish</button>
+      </div>
+    ).join("");
+
+  document.getElementById("message").textContent =
+    filtered.length ? "" : "Mahsulot topilmadi.";
 }
 
-$("search").addEventListener("input",renderProducts);
+function escapeHTML(value){
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  })[char]);
+}
 
-$("categories").addEventListener("click",e=>{
-if(!e.target.dataset.cat)return;
-category=e.target.dataset.cat;
-document.querySelectorAll(".categories button").forEach(b=>
-b.classList.toggle("active",b===e.target));
-renderProducts();
-});
+function safeImage(value){
+  try{
+    const url = new URL(value);
+    if(url.protocol==="https:" || url.protocol==="http:"){
+      return url.href;
+    }
+  }catch(e){}
+  return "https://placehold.co/300x200?text=KABEL+MARKET";
+}
 
 function addCart(id){
-const p=products.find(x=>Number(x.id)===id);
-if(!p)return;
-const f=cart.find(x=>Number(x.id)===id);
-if(f)f.qty++;
-else cart.push({...p,qty:1});
-renderCart();
+  const product = products.find(p=>Number(p.id)===id);
+  if(!product) return;
+
+  const item = cart.find(x=>x.id===id);
+
+  if(item){
+    if(item.quantity >= Number(product.stock || 0)){
+      alert("Omborda mahsulot yetarli emas");
+      return;
+    }
+    item.quantity++;
+  }else{
+    if(Number(product.stock || 0)<1){
+      alert("Mahsulot omborda yo‘q");
+      return;
+    }
+    cart.push({...product,quantity:1});
+  }
+
+  updateCart();
 }
 
-function removeCart(id){
-const p=cart.find(x=>Number(x.id)===id);
-if(!p)return;
-p.qty--;
-if(p.qty<=0)cart=cart.filter(x=>Number(x.id)!==id);
-renderCart();
+function updateCart(){
+  document.getElementById("cartCount").textContent =
+    cart.reduce((s,x)=>s+x.quantity,0);
+
+  document.getElementById("cartItems").innerHTML =
+    cart.map(x=>
+      <div class="cartitem">
+        <div>
+          <b>${escapeHTML(x.name)}</b><br>
+          ${money(x.price)} × ${x.quantity}
+        </div>
+        <div>
+          <button onclick="changeQty(${x.id},-1)">−</button>
+          <button onclick="changeQty(${x.id},1)">+</button>
+        </div>
+      </div>
+    ).join("");
+
+  const total = cart.reduce((s,x)=>s+Number(x.price)*x.quantity,0);
+  document.getElementById("total").textContent = "Jami: "+money(total);
 }
 
-function renderCart(){
-$("cart").innerHTML=cart.length?cart.map(p=>
-<div class="cartline">
-<span>${esc(p.name)} × ${p.qty}</span>
-<span>${money(Number(p.price)*p.qty)}
-<button class="smallbtn" onclick="removeCart(${Number(p.id)})">−</button>
-</span>
-</div>).join(""):"Savatcha bo‘sh";
+function changeQty(id,change){
+  const item = cart.find(x=>x.id===id);
+  if(!item) return;
 
-$("total").textContent="Jami: "+money(
-cart.reduce((s,p)=>s+Number(p.price)*p.qty,0));
+  const product = products.find(p=>Number(p.id)===id);
+  const next = item.quantity+change;
+
+  if(next<=0){
+    cart = cart.filter(x=>x.id!==id);
+  }else if(next<=Number(product.stock || 0)){
+    item.quantity=next;
+  }else{
+    alert("Omborda mahsulot yetarli emas");
+  }
+
+  updateCart();
 }
 
-async function checkout(){
-if(!cart.length)return alert("Savatcha bo‘sh!");
-
-const name=$("customer").value.trim();
-const phone=$("phone").value.trim();
-const address=$("address").value.trim();
-
-if(!name||!phone)return alert("Ism va telefon raqamini kiriting!");
-
-const total=cart.reduce((s,p)=>s+Number(p.price)*p.qty,0);
-const items=cart.map(p=>({
-name:p.name,price:Number(p.price),qty:p.qty
-}));
-
-const {data,error}=await db.from("orders").insert([{
-customer_name:name,
-phone,
-address,
-items,
-total,
-status:"Yangi"
-}]).select().single();
-
-if(error)return alert("Buyurtma xatosi: "+error.message);
-
-alert("Buyurtmangiz qabul qilindi! №"+data.id);
-cart=[];
-renderCart();
-$("customer").value="";
-$("phone").value="";
-$("address").value="";
+function toggleCart(){
+  const panel=document.getElementById("cartPanel");
+  panel.style.display=panel.style.display==="block"?"none":"block";
 }
 
-function showAdmin(){
-$("admin").classList.toggle("hidden");
+function openOrder(){
+  if(!cart.length){
+    alert("Savatcha bo‘sh");
+    return;
+  }
+  document.getElementById("orderModal").style.display="flex";
 }
 
-async function loginAdmin(){
-const email=$("email").value.trim();
-const password=$("password").value;
-if(!email||!password)return alert("Email va parol kiriting!");
+function closeOrder(){
+  document.getElementById("orderModal").style.display="none";
+}
+async function sendOrder(){
+  const name=document.getElementById("customerName").value.trim();
+  const phone=document.getElementById("customerPhone").value.trim();
+  const address=document.getElementById("customerAddress").value.trim();
+  const message=document.getElementById("orderMessage");
 
-const {data,error}=await db.auth.signInWithPassword({email,password});
-if(error)return alert("Kirish xatosi: "+error.message);
+  if(!name || !phone){
+    message.textContent="Ism va telefon raqamini kiriting.";
+    return;
+  }
 
-$("login").classList.add("hidden");
-$("adminContent").classList.remove("hidden");
-await loadAdmin();
+  if(!cart.length){
+    message.textContent="Savatcha bo‘sh.";
+    return;
+  }
+
+  const total=cart.reduce((s,x)=>s+Number(x.price)*x.quantity,0);
+
+  message.textContent="Buyurtma yuborilmoqda...";
+
+  try{
+    const {data:order,error:orderError}=await db
+      .from("orders")
+      .insert({
+        customer_name:name,
+        phone:phone,
+        address:address,
+        total:total
+      })
+      .select("id")
+      .single();
+
+    if(orderError) throw orderError;
+
+    const items=cart.map(x=>({
+      order_id:order.id,
+      product_id:x.id,
+      product_name:x.name,
+      quantity:x.quantity,
+      price:x.price
+    }));
+
+    const {error:itemError}=await db
+      .from("order_items")
+      .insert(items);
+
+    if(itemError) throw itemError;
+
+    message.textContent="Buyurtmangiz qabul qilindi!";
+
+    cart=[];
+    updateCart();
+    document.getElementById("customerName").value="";
+    document.getElementById("customerPhone").value="";
+    document.getElementById("customerAddress").value="";
+
+    setTimeout(()=>{
+      closeOrder();
+      document.getElementById("cartPanel").style.display="none";
+    },1800);
+
+  }catch(error){
+    message.textContent="Xatolik: "+error.message;
+  }
 }
 
-async function loadAdmin(){
-await loadProducts();
-renderManage();
-await loadOrders();
-}
-
-async function addProduct(){
-const name=$("pname").value.trim();
-const price=Number($("pprice").value);
-
-if(!name!Number.isFinite(price)price<=0)
-return alert("Mahsulot nomi va narxini to‘g‘ri kiriting!");
-
-const item={
-name,
-category:$("pcat").value,
-price,
-image:$("pimage").value.trim(),
-description:$("pdesc").value.trim()
-};
-
-let result;
-[11.11.2026 21:46] Admin: if(editingId!==null){
-result=await db.from("products").update(item).eq("id",editingId);
-}else{
-result=await db.from("products").insert([item]);
-}
-
-if(result.error)return alert("Saqlash xatosi: "+result.error.message);
-
-alert(editingId!==null?"Mahsulot yangilandi!":"Mahsulot qo‘shildi!");
-editingId=null;
-$("pname").value="";
-$("pprice").value="";
-$("pimage").value="";
-$("pdesc").value="";
-await loadAdmin();
-}
-
-function editProduct(id){
-const p=products.find(x=>Number(x.id)===id);
-if(!p)return;
-editingId=id;
-$("pname").value=p.name||"";
-$("pcat").value=p.category||"Boshqa";
-$("pprice").value=p.price;
-$("pimage").value=p.image||"";
-$("pdesc").value=p.description||"";
-$("pname").scrollIntoView({behavior:"smooth"});
-}
-
-function renderManage(){
-$("manage").innerHTML=products.map(p=>
-<div class="admin-item">
-<b>${esc(p.name)}</b><br>
-${money(p.price)}<br>
-<button onclick="editProduct(${Number(p.id)})">Tahrirlash</button>
-<button class="smallbtn" onclick="deleteProduct(${Number(p.id)})">O‘chirish</button>
-</div>).join("")||"Mahsulotlar yo‘q";
-}
-
-async function deleteProduct(id){
-if(!confirm("Mahsulot o‘chirilsinmi?"))return;
-const {error}=await db.from("products").delete().eq("id",id);
-if(error)return alert("O‘chirish xatosi: "+error.message);
-await loadAdmin();
-}
-
-async function loadOrders(){
-$("orders").textContent="Yuklanmoqda...";
-const {data,error}=await db.from("orders")
-.select("*").order("created_at",{ascending:false});
-
-if(error){
-$("orders").textContent="Xatolik: "+error.message;
-return;
-}
-
-$("orders").innerHTML=(data||[]).map(o=>
-<div class="admin-item">
-<b>Buyurtma #${esc(o.id)}</b><br>
-Ism: ${esc(o.customer_name)}<br>
-Telefon: ${esc(o.phone)}<br>
-Manzil: ${esc(o.address)}<br>
-Jami: ${money(o.total)}<br>
-Holati: ${esc(o.status||"Yangi")}<br>
-<small>${esc(JSON.stringify(o.items||[]))}</small>
-</div>).join("")||"Buyurtmalar yo‘q";
-}
-
-async function logoutAdmin(){
-await db.auth.signOut();
-$("login").classList.remove("hidden");
-$("adminContent").classList.add("hidden");
-$("password").value="";
-editingId=null;
-}
-
-db.auth.onAuthStateChange((event,session)=>{
-if(!session){
-$("login").classList.remove("hidden");
-$("adminContent").classList.add("hidden");
-}
-});
-
-loadProducts();
-
-if(window.Telegram?.WebApp){
-Telegram.WebApp.ready();
-Telegram.WebApp.expand();
-}
+loadData();
 </script>
+
 </body>
 </html>
