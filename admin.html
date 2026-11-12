@@ -1,0 +1,283 @@
+[12.11.2026 19:09] Admin: <!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KABEL MARKET ADMIN</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#f1f4f9;font-family:Arial;color:#172033}
+.container{max-width:600px;margin:auto}
+.card{background:white;padding:18px;border-radius:15px;margin-bottom:15px}
+input,textarea{width:100%;padding:13px;margin:7px 0;border:1px solid #ddd;border-radius:9px;font-size:16px}
+button{border:0;padding:12px;border-radius:9px;background:#1769e0;color:white;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+.danger{background:#dc3545}
+.secondary{background:#64748b}
+.product{display:flex;gap:12px;align-items:center;border-bottom:1px solid #eee;padding:12px 0}
+.product img{width:65px;height:65px;object-fit:contain;background:#f5f5f5;border-radius:8px}
+.product-info{flex:1;min-width:0}
+.actions{display:flex;gap:5px;margin-top:7px}
+.actions button{padding:8px}
+#panel{display:none}
+#status{color:#1769e0}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="card" id="login">
+<h2>🔐 Admin kirish</h2>
+<input id="email" type="email" placeholder="Admin email">
+<input id="password" type="password" placeholder="Parol">
+<button id="loginBtn" onclick="login()">Kirish</button>
+<p id="loginStatus"></p>
+</div>
+
+<div id="panel">
+<div class="card">
+<h2>⚡ KABEL MARKET ADMIN</h2>
+<p>Mahsulotlarni boshqarish</p>
+<button class="secondary" onclick="logout()">Chiqish</button>
+</div>
+
+<div class="card">
+<h3 id="formTitle">Yangi mahsulot qo‘shish</h3>
+<input id="name" placeholder="Mahsulot nomi">
+<textarea id="description" placeholder="Mahsulot haqida ma'lumot"></textarea>
+<input id="price" type="number" min="0" placeholder="Narxi (so‘m)">
+<input id="category" placeholder="Kategoriya">
+<input id="stock" type="number" min="0" placeholder="Ombordagi soni">
+<label>Mahsulot rasmi:</label>
+<input id="image" type="file" accept="image/*">
+<button id="saveBtn" onclick="saveProduct()">Mahsulotni saqlash</button>
+<button class="secondary" onclick="resetForm()">Bekor qilish</button>
+<p id="status"></p>
+</div>
+
+<div class="card">
+<h3>📦 Mahsulotlar ro‘yxati</h3>
+<div id="products">Yuklanmoqda...</div>
+</div>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://ncfmpgqdcjhsoifijnxr.supabase.co";
+const SUPABASE_KEY="sb_publishable_L1BOMVyFFWqEJUFjbALqig_V8oO5kHz";
+
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let editingId=null;
+let productList=[];
+
+function escapeHTML(value){
+ return String(value??"").replace(/[&<>"']/g,c=>({
+  "&":"&amp;",
+  "<":"&lt;",
+  ">":"&gt;",
+  '"':"&quot;",
+  "'":"&#39;"
+ })[c]);
+}
+
+async function login(){
+ const email=document.getElementById("email").value.trim();
+ const password=document.getElementById("password").value;
+ const status=document.getElementById("loginStatus");
+ const btn=document.getElementById("loginBtn");
+
+ if(!email||!password){
+  status.textContent="Email va parolni kiriting.";
+  return;
+ }
+
+ btn.disabled=true;
+ status.textContent="Tekshirilmoqda...";
+
+ try{
+  const {data,error}=await db.auth.signInWithPassword({email,password});
+  if(error) throw error;
+  await checkAdmin(data.user);
+ }catch(error){
+  status.textContent="Xatolik: "+error.message;
+ }finally{
+  btn.disabled=false;
+ }
+}
+
+async function checkAdmin(user){
+ const {data,error}=await db.from("admin_users")
+  .select("user_id")
+  .eq("user_id",user.id)
+  .maybeSingle();
+
+ if(error) throw error;
+ if(!data){
+  await db.auth.signOut();
+  throw new Error("Admin ruxsati yo‘q.");
+ }
+
+ document.getElementById("login").style.display="none";
+ document.getElementById("panel").style.display="block";
+ await loadProducts();
+}
+
+async function loadProducts(){
+ const box=document.getElementById("products");
+ box.textContent="Yuklanmoqda...";
+
+ const {data,error}=await db.from("products")
+  .select("*").order("id",{ascending:false});
+
+ if(error){
+  box.textContent="Xatolik: "+error.message;
+  return;
+ }
+
+ productList=data||[];
+[12.11.2026 19:09] Admin: if(!productList.length){
+  box.textContent="Hozircha mahsulot yo‘q.";
+  return;
+ }
+
+ box.innerHTML=productList.map(p=>
+  <div class="product">
+   <img src="${escapeHTML(p.image_url||"https://placehold.co/100")}" alt="Mahsulot">
+   <div class="product-info">
+    <b>${escapeHTML(p.name)}</b>
+    <div>${Number(p.price).toLocaleString("uz-UZ")} so‘m</div>
+    <small>${escapeHTML(p.category||"")} | Ombor: ${Number(p.stock||0)}</small>
+    <div class="actions">
+     <button onclick="editProduct(${Number(p.id)})">Tahrirlash</button>
+     <button class="danger" onclick="deleteProduct(${Number(p.id)})">O‘chirish</button>
+    </div>
+   </div>
+  </div>
+ ).join("");
+}
+
+async function saveProduct(){
+ const status=document.getElementById("status");
+ const btn=document.getElementById("saveBtn");
+
+ const name=document.getElementById("name").value.trim();
+ const description=document.getElementById("description").value.trim();
+ const price=Number(document.getElementById("price").value);
+ const category=document.getElementById("category").value.trim();
+ const stock=Number(document.getElementById("stock").value);
+ const file=document.getElementById("image").files[0];
+
+ if(!namedocument.getElementById("price").value===""
+ !Number.isFinite(price)price<0
+ document.getElementById("stock").value===""||
+ !Number.isInteger(stock)||stock<0){
+  status.textContent="Nom, narx va ombor sonini to‘g‘ri kiriting.";
+  return;
+ }
+
+ btn.disabled=true;
+ status.textContent="Saqlanmoqda...";
+
+ try{
+  let image_url=editingId?
+   (productList.find(p=>Number(p.id)===editingId)?.image_url||null):null;
+
+  if(file){
+   if(!file.type.startsWith("image/")) throw new Error("Faqat rasm tanlang.");
+   if(file.size>5*1024*1024) throw new Error("Rasm 5 MB dan oshmasin.");
+
+   const ext=file.name.split(".").pop().toLowerCase();
+   const path=crypto.randomUUID()+"."+ext;
+
+   const {error:uploadError}=await db.storage.from("products")
+    .upload(path,file,{upsert:false});
+
+   if(uploadError) throw uploadError;
+
+   image_url=db.storage.from("products").getPublicUrl(path).data.publicUrl;
+  }
+
+  const product={name,description,price,category,stock,image_url};
+
+  let result;
+
+  if(editingId){
+   result=await db.from("products").update(product).eq("id",editingId);
+  }else{
+   result=await db.from("products").insert(product);
+  }
+
+  if(result.error) throw result.error;
+
+  status.textContent="Mahsulot muvaffaqiyatli saqlandi!";
+  resetForm();
+  await loadProducts();
+
+ }catch(error){
+  status.textContent="Xatolik: "+error.message;
+ }finally{
+  btn.disabled=false;
+ }
+}
+
+function editProduct(id){
+ const p=productList.find(x=>Number(x.id)===id);
+ if(!p)return;
+
+ editingId=id;
+ document.getElementById("name").value=p.name||"";
+ document.getElementById("description").value=p.description||"";
+ document.getElementById("price").value=p.price??"";
+ document.getElementById("category").value=p.category||"";
+ document.getElementById("stock").value=p.stock??"";
+ document.getElementById("image").value="";
+
+ document.getElementById("formTitle").textContent="Mahsulotni tahrirlash";
+ document.getElementById("saveBtn").textContent="O‘zgarishlarni saqlash";
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function deleteProduct(id){
+ if(!confirm("Mahsulotni o‘chirmoqchimisiz?"))return;
+
+ const {error}=await db.from("products").delete().eq("id",id);
+
+ if(error){
+  alert("Xatolik: "+error.message);
+  return;
+ }
+
+ await loadProducts();
+}
+
+function resetForm(){
+ editingId=null;
+ ["name","description","price","category","stock","image"].forEach(id=>{
+  document.getElementById(id).value="";
+ });
+ document.getElementById("formTitle").textContent="Yangi mahsulot qo‘shish";
+ document.getElementById("saveBtn").textContent="Mahsulotni saqlash";
+}
+
+async function logout(){
+ await db.auth.signOut();
+ location.reload();
+}
+
+async function restoreSession(){
+ const {data,error}=await db.auth.getSession();
+ if(error)return;
+ if(data.session){
+  try{
+   await checkAdmin(data.session.user);
+  }catch(e){
+   document.getElementById("loginStatus").textContent=e.message;
+  }
+ }
+}
+[12.11.2026 19:09] Admin: restoreSession();
+</script>
+</body>
+</html>
