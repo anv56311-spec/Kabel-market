@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#101827">
+<meta name="theme-color" content="#171b2d">
 <title>KABEL MARKET</title>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -11,379 +11,290 @@
 
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#f3f5f9;color:#172033}
-header{background:#101827;color:white;padding:18px}
-header h2{margin:0}
-header p{margin:6px 0 0;color:#cbd5e1}
-.search{padding:15px}
-input{width:100%;padding:14px;border:1px solid #ddd;border-radius:12px;font-size:16px}
-.categories{display:flex;gap:8px;overflow:auto;padding:0 15px 15px}
-.categories button{border:0;background:white;padding:11px 16px;border-radius:20px;white-space:nowrap}
-.categories button.active{background:#172b4d;color:white}
-.products{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:0 12px 100px}
-.product{background:white;border-radius:14px;padding:10px;overflow:hidden}
-.product img{width:100%;height:135px;object-fit:contain;background:#f8fafc;border-radius:10px}
-.product h3{font-size:15px;margin:10px 0 6px}
-.price{font-weight:bold;color:#087b45;margin:7px 0}
-.product button,.mainbtn{width:100%;border:0;background:#1769e0;color:white;padding:12px;border-radius:10px;font-weight:bold}
-.bottom{position:fixed;bottom:0;left:0;right:0;background:white;padding:12px;box-shadow:0 -2px 12px #0001}
-.bottom button{width:100%;padding:15px;background:#101827;color:white;border:0;border-radius:12px;font-size:16px}
-#cartPanel{display:none;background:white;padding:18px;margin:12px;border-radius:15px}
-.cartitem{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eee;gap:10px}
-.cartitem button{padding:7px 12px;border:0;border-radius:7px}
-.modal{display:none;position:fixed;inset:0;background:#0008;z-index:10;align-items:center;justify-content:center;padding:15px}
-.modalbox{background:white;width:100%;max-width:400px;padding:20px;border-radius:16px}
-.modalbox input{margin:7px 0}
-.close{float:right;border:0;background:#eee;padding:8px;border-radius:8px}
-#message{text-align:center;padding:20px;color:#666}
+body{
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:#f3f5f9;
+ color:#172033;
+}
+header{
+ background:#171b2d;
+ color:white;
+ padding:20px 16px;
+}
+header h2{margin:0 0 12px}
+.search{
+ width:100%;
+ padding:13px;
+ border:0;
+ border-radius:10px;
+ font-size:15px;
+}
+.categories{
+ display:flex;
+ overflow-x:auto;
+ gap:9px;
+ padding:14px;
+}
+.categories button{
+ border:0;
+ padding:10px 15px;
+ border-radius:20px;
+ background:white;
+ white-space:nowrap;
+}
+.categories button.active{
+ background:#ffca28;
+}
+main{padding:10px 14px}
+.products{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;
+}
+.product{
+ background:white;
+ border-radius:13px;
+ overflow:hidden;
+ box-shadow:0 2px 8px #0000000d;
+}
+.product img{
+ width:100%;
+ height:135px;
+ object-fit:contain;
+ background:#fff;
+}
+.info{padding:10px}
+.info h3{font-size:15px;margin:0 0 7px}
+.price{
+ color:#e69b00;
+ font-weight:bold;
+ margin:8px 0;
+}
+.add{
+ width:100%;
+ border:0;
+ border-radius:9px;
+ background:#ffca28;
+ padding:11px;
+ font-weight:bold;
+}
+.cart{
+ position:fixed;
+ bottom:0;
+ left:0;
+ width:100%;
+ padding:14px;
+ background:white;
+ box-shadow:0 -2px 12px #0002;
+}
+.cart button{
+ width:100%;
+ padding:14px;
+ background:#171b2d;
+ color:white;
+ border:0;
+ border-radius:10px;
+ font-size:16px;
+}
+#status{text-align:center;padding:15px;color:#777}
 </style>
 </head>
 
 <body>
 
 <header>
-<h2>⚡ KABEL MARKET</h2>
-<p>Elektr mahsulotlari internet do‘koni</p>
+ <h2>⚡ KABEL MARKET</h2>
+ <input id="search" class="search"
+ placeholder="Mahsulot qidirish...">
 </header>
 
-<div class="search">
-<input id="search" placeholder="🔎 Mahsulot qidirish..." oninput="renderProducts()">
+<div class="categories" id="categories">
+ <button class="active" data-category="all">Barchasi</button>
 </div>
 
-<div class="categories" id="categories"></div>
+<main>
+ <div id="status">Mahsulotlar yuklanmoqda...</div>
+ <div class="products" id="products"></div>
+</main>
 
-<div id="message">Mahsulotlar yuklanmoqda...</div>
-<div class="products" id="products"></div>
-
-<div id="cartPanel">
-<h3>🛒 Savatcha</h3>
-<div id="cartItems"></div>
-<h3 id="total">Jami: 0 so‘m</h3>
-<button class="mainbtn" onclick="openOrder()">Buyurtma berish</button>
-</div>
-
-<div class="bottom">
-<button onclick="toggleCart()">🛒 Savatcha (<span id="cartCount">0</span>)</button>
-</div>
-
-<div class="modal" id="orderModal">
-<div class="modalbox">
-<button class="close" onclick="closeOrder()">✕</button>
-<h3>Buyurtma berish</h3>
-<input id="customerName" placeholder="Ismingiz">
-<input id="customerPhone" placeholder="Telefon raqamingiz">
-<input id="customerAddress" placeholder="Manzilingiz">
-<button class="mainbtn" onclick="sendOrder()">Buyurtmani yuborish</button>
-<p id="orderMessage"></p>
-</div>
+<div class="cart">
+ <button onclick="showCart()">
+ 🛒 Savatcha: <span id="cartCount">0</span>
+ </button>
 </div>
 
 <script>
-const SUPABASE_URL = "https://ncfmpgqdcjhsoifijnxr.supabase.co";
-const SUPABASE_KEY = "sb_publishable_L1BOMVyFFWqEJUFjbALqig_V8oO5kHz";
+const SUPABASE_URL =
+"https://ncfmpgqdcjhsoifijnxr.supabase.co";
 
-const db = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
+const SUPABASE_KEY = "BU_YERGA_SUPABASE_PUBLISHABLE_KEY";
+
+const db = supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_KEY
 );
 
 const tg = window.Telegram?.WebApp;
-
-if(tg){
-  tg.ready();
-  tg.expand();
-}
+tg?.ready();
+tg?.expand();
 
 let products = [];
-let categories = [];
 let cart = [];
 let selectedCategory = "all";
 
-function money(value){
-  return Number(value ?? 0).toLocaleString("uz-UZ") + " so‘m";
-}
+async function loadProducts(){
+ const status = document.getElementById("status");
 
-function escapeHTML(value){
-  return String(value ?? "").replace(/[&<>"']/g, char => ({
-    "&":"&amp;",
-    "<":"&lt;",
-    ">":"&gt;",
-    '"':"&quot;",
-    "'":"&#39;"
-  })[char]);
-}
+ try{
+  const {data,error} = await db
+   .from("products")
+   .select("id,name,category,description,price,amperage,image_url,stock")
+   .order("created_at",{ascending:false});
 
-function safeImage(value){
-  try{
-    const url = new URL(value);
-if(url.protocol === "https:" || url.protocol === "http:"){
-      return url.href;
-    }
-  }catch(e){}
+  if(error) throw error;
 
-  return "https://placehold.co/300x200?text=KABEL+MARKET";
-}
+  products = data || [];
+  renderCategories();
+  renderProducts();
 
-async function loadData(){
-  const message = document.getElementById("message");
+  status.textContent = products.length
+   ? ""
+   : "Hozircha mahsulotlar mavjud emas";
 
-  try{
-    message.textContent = "Mahsulotlar yuklanmoqda...";
-
-    const [p,c] = await Promise.all([
-      db.from("products").select("*").order("id",{ascending:false}),
-      db.from("categories").select("*").order("id")
-    ]);
-
-    if(p.error) throw p.error;
-    if(c.error) throw c.error;
-
-    products = p.data ?? [];
-    categories = c.data ?? [];
-
-    renderCategories();
-    renderProducts();
-
-    message.textContent = products.length
-      ? ""
-      : "Hozircha mahsulot mavjud emas.";
-
-  }catch(error){
-    console.error("Supabase yuklash xatosi:",error);
-    message.textContent = "Xatolik: " + error.message;
-  }
+ }catch(error){
+  status.textContent =
+   "Xatolik: " + error.message;
+ }
 }
 
 function renderCategories(){
-  const box = document.getElementById("categories");
+ const box = document.getElementById("categories");
+ const categories = [
+  ...new Set(products.map(p=>p.category).filter(Boolean))
+ ];
 
-  box.innerHTML = 
-    <button class="${selectedCategory==="all"?"active":""}"
-      onclick="chooseCategory('all')">Barchasi</button>
+ box.innerHTML =
+ '<button class="active" data-category="all">Barchasi</button>';
 
-    ${categories.map(c=>
-      <button
-        class="${selectedCategory===String(c.name)?"active":""}"
-        onclick="chooseCategory('${encodeURIComponent(String(c.name)).replace(/'/g,"%27")}')">
-        ${escapeHTML(c.name)}
-      </button>
-    ).join("")}
-  ;
-}
+ categories.forEach(category=>{
+  const button = document.createElement("button");
+  button.textContent = category;
+  button.dataset.category = category;
+  box.appendChild(button);
+ });
 
-function chooseCategory(id){
-  selectedCategory = decodeURIComponent(id);
-  renderCategories();
-  renderProducts();
+ box.querySelectorAll("button").forEach(button=>{
+  button.onclick = ()=>{
+   selectedCategory = button.dataset.category;
+   box.querySelectorAll("button").forEach(b=>
+    b.classList.toggle("active",b===button)
+   );
+   renderProducts();
+  };
+ });
 }
 
 function renderProducts(){
-  const search = document.getElementById("search").value
-    .toLowerCase().trim();
+ const box = document.getElementById("products");
+ const query = document.getElementById("search").value.toLowerCase();
 
-  const filtered = products.filter(p=>{
-    const matchName = String(p.name ?? "")
-      .toLowerCase().includes(search);
+ box.innerHTML = "";
 
-    const matchCategory =
-      selectedCategory === "all" ||
-      String(p.category ?? "") === selectedCategory;
+ const filtered = products.filter(p=>{
+  const categoryMatch =
+   selectedCategory === "all" ||
+   p.category === selectedCategory;
+   const searchMatch =
+   (p.name || "").toLowerCase().includes(query);
 
-    return matchName && matchCategory;
-  });
+  return categoryMatch && searchMatch;
+ });
 
-  document.getElementById("products").innerHTML =
-    filtered.map(p=>
-      <div class="product">
-        <img
-          src="${safeImage(p.image_url)}"
-          alt="${escapeHTML(p.name)}"
-          onerror="this.src='https://placehold.co/300x200?text=KABEL+MARKET'">
+ filtered.forEach(p=>{
+  const card = document.createElement("div");
+  card.className = "product";
 
-        <h3>${escapeHTML(p.name)}</h3>
+  const img = document.createElement("img");
+  img.src = p.image_url || "";
+  img.alt = p.name || "Mahsulot";
+  img.onerror = ()=>img.style.display="none";
 
-        <div class="price">${money(p.price)}</div>
+  const info = document.createElement("div");
+  info.className = "info";
 
-        ${p.amperage ? <p>Tok kuchi: ${escapeHTML(p.amperage)}</p> : ""}
+  const name = document.createElement("h3");
+  name.textContent = p.name || "Mahsulot";
 
-        <p>Omborda: ${Number(p.stock ?? 0)}</p>
+  const description = document.createElement("p");
+  description.textContent = p.description || "";
+  
+  const price = document.createElement("div");
+  price.className = "price";
+  price.textContent =
+   Number(p.price || 0).toLocaleString("uz-UZ") + " so'm";
 
-        <button onclick='addCart(${JSON.stringify(String(p.id))})'>
-          Savatchaga qo‘shish
-        </button>
-      </div>
-    ).join("");
+  const add = document.createElement("button");
+  add.className = "add";
+  add.textContent = "Savatga qo‘shish";
+  add.onclick = ()=>addToCart(p.id);
 
-  if(products.length && !filtered.length){
-    document.getElementById("message").textContent =
-      "Mahsulot topilmadi.";
-  }else{
-    document.getElementById("message").textContent = "";
-  }
+  info.append(name,description,price,add);
+  card.append(img,info);
+  box.appendChild(card);
+ });
 }
 
-function addCart(id){
-  const product = products.find(p=>String(p.id)===String(id));
-  if(!product) return;
+function addToCart(id){
+ const item = cart.find(x=>x.id===id);
 
-  const item = cart.find(x=>String(x.id)===String(id));
-  const stock = Number(product.stock ?? 0);
+ if(item) item.quantity++;
+ else cart.push({id,quantity:1});
 
-  if(item){
-    if(item.quantity >= stock){
-      alert("Omborda mahsulot yetarli emas");
-      return;
-    }
-    item.quantity++;
-  }else{
-    if(stock < 1){
-      alert("Mahsulot omborda yo‘q");
-      return;
-    }
-    cart.push({...product,quantity:1});
-  }
-
-  updateCart();
+ updateCart();
 }
 
 function updateCart(){
-  document.getElementById("cartCount").textContent =
-    cart.reduce((s,x)=>s+x.quantity,0);
-
-  document.getElementById("cartItems").innerHTML =
-    cart.map(x=>
-      <div class="cartitem">
-        <div>
-          <b>${escapeHTML(x.name)}</b><br>
-          ${money(x.price)} × ${x.quantity}
-        </div>
-        <div>
-          <button onclick='changeQty(${JSON.stringify(String(x.id))},-1)'>−</button>
-          <button onclick='changeQty(${JSON.stringify(String(x.id))},1)'>+</button>
-        </div>
-      </div>
-    ).join("");
-
-  const total = cart.reduce(
-    (s,x)=>s+Number(x.price)*x.quantity,0
-  );
-
-  document.getElementById("total").textContent =
-    "Jami: " + money(total);
+ const count = cart.reduce((sum,item)=>
+  sum+item.quantity,0
+ );
+ document.getElementById("cartCount").textContent=count;
 }
 
-function changeQty(id,change){
-  const item = cart.find(x=>String(x.id)===String(id));
-  if(!item) return;
-const product = products.find(p=>String(p.id)===String(id));
-  if(!product) return;
+function showCart(){
+ if(!cart.length){
+  alert("Savatcha bo‘sh");
+  return;
+ }
 
-  const next = item.quantity + change;
-  const stock = Number(product.stock ?? 0);
+ let total = 0;
+ let message = "SAVATCHA:\n\n";
 
-  if(next <= 0){
-    cart = cart.filter(x=>String(x.id)!==String(id));
-  }else if(next <= stock){
-    item.quantity = next;
-  }else{
-    alert("Omborda mahsulot yetarli emas");
-  }
+ cart.forEach(item=>{
+  const p = products.find(x=>x.id===item.id);
+  if(!p) return;
 
-  updateCart();
+  const sum = Number(p.price || 0)*item.quantity;
+  total += sum;
+
+  message += p.name + " x " + item.quantity +
+   " = " + sum.toLocaleString("uz-UZ") + " so'm\n";
+ });
+
+ message += "\nJami: " +
+  total.toLocaleString("uz-UZ") + " so'm";
+
+ alert(message);
 }
 
-function toggleCart(){
-  const panel = document.getElementById("cartPanel");
+document.getElementById("search").addEventListener(
+ "input",renderProducts
+);
 
-  panel.style.display =
-    panel.style.display === "block" ? "none" : "block";
-}
-
-function openOrder(){
-  if(!cart.length){
-    alert("Savatcha bo‘sh");
-    return;
-  }
-
-  document.getElementById("orderModal").style.display = "flex";
-}
-
-function closeOrder(){
-  document.getElementById("orderModal").style.display = "none";
-}
-
-async function sendOrder(){
-  const name = document.getElementById("customerName").value.trim();
-  const phone = document.getElementById("customerPhone").value.trim();
-  const address = document.getElementById("customerAddress").value.trim();
-  const message = document.getElementById("orderMessage");
-
-  if(!name || !phone){
-    message.textContent = "Ism va telefon raqamini kiriting.";
-    return;
-  }
-
-  if(!cart.length){
-    message.textContent = "Savatcha bo‘sh.";
-    return;
-  }
-
-  const total = cart.reduce(
-    (s,x)=>s+Number(x.price)*x.quantity,0
-  );
-
-  message.textContent = "Buyurtma yuborilmoqda...";
-
-  try{
-    const {data:order,error:orderError} = await db
-      .from("orders")
-      .insert({
-        customer_name:name,
-        phone:phone,
-        address:address,
-        total:total
-      })
-      .select("id")
-      .single();
-
-    if(orderError) throw orderError;
-
-    const items = cart.map(x=>({
-      order_id:order.id,
-      product_id:x.id,
-      product_name:x.name,
-      quantity:x.quantity,
-      price:x.price
-    }));
-
-    const {error:itemError} = await db
-      .from("order_items")
-      .insert(items);
-
-    if(itemError) throw itemError;
-
-    message.textContent = "Buyurtmangiz qabul qilindi!";
-
-    cart = [];
-    updateCart();
-
-    document.getElementById("customerName").value = "";
-    document.getElementById("customerPhone").value = "";
-    document.getElementById("customerAddress").value = "";
-
-    setTimeout(()=>{
-      closeOrder();
-      document.getElementById("cartPanel").style.display = "none";
-    },1800);
-
-  }catch(error){
-    console.error("Buyurtma xatosi:",error);
-    message.textContent = "Xatolik: " + error.message;
-  }
-}
-
-loadData();
+loadProducts();
 </script>
 
 </body>
 </html>
+
+                      
