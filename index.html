@@ -112,10 +112,11 @@ function escapeHTML(value){
     "'":"&#39;"
   })[char]);
 }
+
 function safeImage(value){
   try{
     const url = new URL(value);
-    if(url.protocol === "https:" || url.protocol === "http:"){
+if(url.protocol === "https:" || url.protocol === "http:"){
       return url.href;
     }
   }catch(e){}
@@ -158,11 +159,12 @@ function renderCategories(){
 
   box.innerHTML = 
     <button class="${selectedCategory==="all"?"active":""}"
-      onclick='chooseCategory("all")'>Barchasi</button>
+      onclick="chooseCategory('all')">Barchasi</button>
+
     ${categories.map(c=>
       <button
-        class="${String(selectedCategory)===String(c.id)?"active":""}"
-        onclick='chooseCategory(${JSON.stringify(String(c.id))})'>
+        class="${selectedCategory===String(c.name)?"active":""}"
+        onclick="chooseCategory('${encodeURIComponent(String(c.name)).replace(/'/g,"%27")}')">
         ${escapeHTML(c.name)}
       </button>
     ).join("")}
@@ -170,7 +172,7 @@ function renderCategories(){
 }
 
 function chooseCategory(id){
-  selectedCategory = String(id);
+  selectedCategory = decodeURIComponent(id);
   renderCategories();
   renderProducts();
 }
@@ -185,7 +187,7 @@ function renderProducts(){
 
     const matchCategory =
       selectedCategory === "all" ||
-      String(p.category_id) === String(selectedCategory);
+      String(p.category ?? "") === selectedCategory;
 
     return matchName && matchCategory;
   });
@@ -202,6 +204,8 @@ function renderProducts(){
 
         <div class="price">${money(p.price)}</div>
 
+        ${p.amperage ? <p>Tok kuchi: ${escapeHTML(p.amperage)}</p> : ""}
+
         <p>Omborda: ${Number(p.stock ?? 0)}</p>
 
         <button onclick='addCart(${JSON.stringify(String(p.id))})'>
@@ -213,7 +217,7 @@ function renderProducts(){
   if(products.length && !filtered.length){
     document.getElementById("message").textContent =
       "Mahsulot topilmadi.";
-  }else if(filtered.length){
+  }else{
     document.getElementById("message").textContent = "";
   }
 }
