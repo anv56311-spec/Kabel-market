@@ -1,4 +1,4 @@
-[12.11.2026 19:25] Admin: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
@@ -112,7 +112,7 @@ function escapeHTML(value){
     "'":"&#39;"
   })[char]);
 }
-[12.11.2026 19:25] Admin: function safeImage(value){
+function safeImage(value){
   try{
     const url = new URL(value);
     if(url.protocol === "https:" || url.protocol === "http:"){
@@ -271,7 +271,7 @@ function updateCart(){
 function changeQty(id,change){
   const item = cart.find(x=>String(x.id)===String(id));
   if(!item) return;
-[12.11.2026 19:25] Admin: const product = products.find(p=>String(p.id)===String(id));
+const product = products.find(p=>String(p.id)===String(id));
   if(!product) return;
 
   const next = item.quantity + change;
