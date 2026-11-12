@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+[12.11.2026 19:25] Admin: <!DOCTYPE html>
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
@@ -29,7 +29,8 @@ input{width:100%;padding:14px;border:1px solid #ddd;border-radius:12px;font-size
 .bottom{position:fixed;bottom:0;left:0;right:0;background:white;padding:12px;box-shadow:0 -2px 12px #0001}
 .bottom button{width:100%;padding:15px;background:#101827;color:white;border:0;border-radius:12px;font-size:16px}
 #cartPanel{display:none;background:white;padding:18px;margin:12px;border-radius:15px}
-.cartitem{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee}
+.cartitem{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eee;gap:10px}
+.cartitem button{padding:7px 12px;border:0;border-radius:7px}
 .modal{display:none;position:fixed;inset:0;background:#0008;z-index:10;align-items:center;justify-content:center;padding:15px}
 .modalbox{background:white;width:100%;max-width:400px;padding:20px;border-radius:16px}
 .modalbox input{margin:7px 0}
@@ -87,6 +88,7 @@ const db = window.supabase.createClient(
 );
 
 const tg = window.Telegram?.WebApp;
+
 if(tg){
   tg.ready();
   tg.expand();
@@ -98,77 +100,7 @@ let cart = [];
 let selectedCategory = "all";
 
 function money(value){
-  return Number(value || 0).toLocaleString("uz-UZ") + " so‘m";
-}
-
-async function loadData(){
-  try{
-    const [p,c] = await Promise.all([
-      db.from("products").select("*").order("id",{ascending:false}),
-      db.from("categories").select("*").order("id")
-    ]);
-
-    if(p.error) throw p.error;
-    if(c.error) throw c.error;
-
-    products = p.data || [];
-    categories = c.data || [];
-renderCategories();
-    renderProducts();
-
-    document.getElementById("message").textContent =
-      products.length ? "" : "Hozircha mahsulot mavjud emas.";
-  }catch(error){
-    document.getElementById("message").textContent =
-      "Xatolik: " + error.message;
-  }
-}
-
-function renderCategories(){
-  const box = document.getElementById("categories");
-
-  box.innerHTML =
-    <button class="${selectedCategory==="all"?"active":""}"
-    onclick="chooseCategory('all')">Barchasi</button> +
-    categories.map(c=>
-      <button class="${String(selectedCategory)===String(c.id)?"active":""}"
-      onclick="chooseCategory('${c.id}')">
-      ${escapeHTML(c.name)}
-      </button>
-    ).join("");
-}
-
-function chooseCategory(id){
-  selectedCategory = id;
-  renderCategories();
-  renderProducts();
-}
-
-function renderProducts(){
-  const search = document.getElementById("search").value.toLowerCase();
-
-  const filtered = products.filter(p=>{
-    const matchName = (p.name || "").toLowerCase().includes(search);
-    const matchCategory = selectedCategory==="all" ||
-      String(p.category_id)===String(selectedCategory);
-    return matchName && matchCategory;
-  });
-
-  document.getElementById("products").innerHTML =
-    filtered.map(p=>
-      <div class="product">
-        <img src="${safeImage(p.image_url)}"
-             alt="${escapeHTML(p.name)}"
-             onerror="this.src='https://placehold.co/300x200?text=KABEL+MARKET'">
-        <h3>${escapeHTML(p.name)}</h3>
-        <div class="price">${money(p.price)}</div>
-        <p>Omborda: ${Number(p.stock || 0)}</p>
-        <button onclick="addCart(${Number(p.id)})">Savatchaga qo‘shish</button>
-      </div>
-    ).join("");
-
-  document.getElementById("message").textContent =
-    filtered.length ? "" : "Mahsulot topilmadi.";
+  return Number(value ?? 0).toLocaleString("uz-UZ") + " so‘m";
 }
 
 function escapeHTML(value){
@@ -180,31 +112,127 @@ function escapeHTML(value){
     "'":"&#39;"
   })[char]);
 }
-
-function safeImage(value){
+[12.11.2026 19:25] Admin: function safeImage(value){
   try{
     const url = new URL(value);
-    if(url.protocol==="https:" || url.protocol==="http:"){
+    if(url.protocol === "https:" || url.protocol === "http:"){
       return url.href;
     }
   }catch(e){}
+
   return "https://placehold.co/300x200?text=KABEL+MARKET";
 }
 
+async function loadData(){
+  const message = document.getElementById("message");
+
+  try{
+    message.textContent = "Mahsulotlar yuklanmoqda...";
+
+    const [p,c] = await Promise.all([
+      db.from("products").select("*").order("id",{ascending:false}),
+      db.from("categories").select("*").order("id")
+    ]);
+
+    if(p.error) throw p.error;
+    if(c.error) throw c.error;
+
+    products = p.data ?? [];
+    categories = c.data ?? [];
+
+    renderCategories();
+    renderProducts();
+
+    message.textContent = products.length
+      ? ""
+      : "Hozircha mahsulot mavjud emas.";
+
+  }catch(error){
+    console.error("Supabase yuklash xatosi:",error);
+    message.textContent = "Xatolik: " + error.message;
+  }
+}
+
+function renderCategories(){
+  const box = document.getElementById("categories");
+
+  box.innerHTML = 
+    <button class="${selectedCategory==="all"?"active":""}"
+      onclick='chooseCategory("all")'>Barchasi</button>
+    ${categories.map(c=>
+      <button
+        class="${String(selectedCategory)===String(c.id)?"active":""}"
+        onclick='chooseCategory(${JSON.stringify(String(c.id))})'>
+        ${escapeHTML(c.name)}
+      </button>
+    ).join("")}
+  ;
+}
+
+function chooseCategory(id){
+  selectedCategory = String(id);
+  renderCategories();
+  renderProducts();
+}
+
+function renderProducts(){
+  const search = document.getElementById("search").value
+    .toLowerCase().trim();
+
+  const filtered = products.filter(p=>{
+    const matchName = String(p.name ?? "")
+      .toLowerCase().includes(search);
+
+    const matchCategory =
+      selectedCategory === "all" ||
+      String(p.category_id) === String(selectedCategory);
+
+    return matchName && matchCategory;
+  });
+
+  document.getElementById("products").innerHTML =
+    filtered.map(p=>
+      <div class="product">
+        <img
+          src="${safeImage(p.image_url)}"
+          alt="${escapeHTML(p.name)}"
+          onerror="this.src='https://placehold.co/300x200?text=KABEL+MARKET'">
+
+        <h3>${escapeHTML(p.name)}</h3>
+
+        <div class="price">${money(p.price)}</div>
+
+        <p>Omborda: ${Number(p.stock ?? 0)}</p>
+
+        <button onclick='addCart(${JSON.stringify(String(p.id))})'>
+          Savatchaga qo‘shish
+        </button>
+      </div>
+    ).join("");
+
+  if(products.length && !filtered.length){
+    document.getElementById("message").textContent =
+      "Mahsulot topilmadi.";
+  }else if(filtered.length){
+    document.getElementById("message").textContent = "";
+  }
+}
+
 function addCart(id){
-  const product = products.find(p=>Number(p.id)===id);
+  const product = products.find(p=>String(p.id)===String(id));
   if(!product) return;
 
-  const item = cart.find(x=>x.id===id);
+  const item = cart.find(x=>String(x.id)===String(id));
+  const stock = Number(product.stock ?? 0);
 
   if(item){
-    if(item.quantity >= Number(product.stock || 0)){
+    if(item.quantity >= stock){
       alert("Omborda mahsulot yetarli emas");
       return;
     }
     item.quantity++;
   }else{
-    if(Number(product.stock || 0)<1){
+    if(stock < 1){
       alert("Mahsulot omborda yo‘q");
       return;
     }
@@ -226,27 +254,33 @@ function updateCart(){
           ${money(x.price)} × ${x.quantity}
         </div>
         <div>
-          <button onclick="changeQty(${x.id},-1)">−</button>
-          <button onclick="changeQty(${x.id},1)">+</button>
+          <button onclick='changeQty(${JSON.stringify(String(x.id))},-1)'>−</button>
+          <button onclick='changeQty(${JSON.stringify(String(x.id))},1)'>+</button>
         </div>
       </div>
     ).join("");
 
-  const total = cart.reduce((s,x)=>s+Number(x.price)*x.quantity,0);
-  document.getElementById("total").textContent = "Jami: "+money(total);
+  const total = cart.reduce(
+    (s,x)=>s+Number(x.price)*x.quantity,0
+  );
+
+  document.getElementById("total").textContent =
+    "Jami: " + money(total);
 }
 
 function changeQty(id,change){
-  const item = cart.find(x=>x.id===id);
+  const item = cart.find(x=>String(x.id)===String(id));
   if(!item) return;
+[12.11.2026 19:25] Admin: const product = products.find(p=>String(p.id)===String(id));
+  if(!product) return;
 
-  const product = products.find(p=>Number(p.id)===id);
-  const next = item.quantity+change;
+  const next = item.quantity + change;
+  const stock = Number(product.stock ?? 0);
 
-  if(next<=0){
-    cart = cart.filter(x=>x.id!==id);
-  }else if(next<=Number(product.stock || 0)){
-    item.quantity=next;
+  if(next <= 0){
+    cart = cart.filter(x=>String(x.id)!==String(id));
+  }else if(next <= stock){
+    item.quantity = next;
   }else{
     alert("Omborda mahsulot yetarli emas");
   }
@@ -255,8 +289,10 @@ function changeQty(id,change){
 }
 
 function toggleCart(){
-  const panel=document.getElementById("cartPanel");
-  panel.style.display=panel.style.display==="block"?"none":"block";
+  const panel = document.getElementById("cartPanel");
+
+  panel.style.display =
+    panel.style.display === "block" ? "none" : "block";
 }
 
 function openOrder(){
@@ -264,34 +300,38 @@ function openOrder(){
     alert("Savatcha bo‘sh");
     return;
   }
-  document.getElementById("orderModal").style.display="flex";
+
+  document.getElementById("orderModal").style.display = "flex";
 }
 
 function closeOrder(){
-  document.getElementById("orderModal").style.display="none";
+  document.getElementById("orderModal").style.display = "none";
 }
+
 async function sendOrder(){
-  const name=document.getElementById("customerName").value.trim();
-  const phone=document.getElementById("customerPhone").value.trim();
-  const address=document.getElementById("customerAddress").value.trim();
-  const message=document.getElementById("orderMessage");
+  const name = document.getElementById("customerName").value.trim();
+  const phone = document.getElementById("customerPhone").value.trim();
+  const address = document.getElementById("customerAddress").value.trim();
+  const message = document.getElementById("orderMessage");
 
   if(!name || !phone){
-    message.textContent="Ism va telefon raqamini kiriting.";
+    message.textContent = "Ism va telefon raqamini kiriting.";
     return;
   }
 
   if(!cart.length){
-    message.textContent="Savatcha bo‘sh.";
+    message.textContent = "Savatcha bo‘sh.";
     return;
   }
 
-  const total=cart.reduce((s,x)=>s+Number(x.price)*x.quantity,0);
+  const total = cart.reduce(
+    (s,x)=>s+Number(x.price)*x.quantity,0
+  );
 
-  message.textContent="Buyurtma yuborilmoqda...";
+  message.textContent = "Buyurtma yuborilmoqda...";
 
   try{
-    const {data:order,error:orderError}=await db
+    const {data:order,error:orderError} = await db
       .from("orders")
       .insert({
         customer_name:name,
@@ -304,7 +344,7 @@ async function sendOrder(){
 
     if(orderError) throw orderError;
 
-    const items=cart.map(x=>({
+    const items = cart.map(x=>({
       order_id:order.id,
       product_id:x.id,
       product_name:x.name,
@@ -312,27 +352,29 @@ async function sendOrder(){
       price:x.price
     }));
 
-    const {error:itemError}=await db
+    const {error:itemError} = await db
       .from("order_items")
       .insert(items);
 
     if(itemError) throw itemError;
 
-    message.textContent="Buyurtmangiz qabul qilindi!";
+    message.textContent = "Buyurtmangiz qabul qilindi!";
 
-    cart=[];
+    cart = [];
     updateCart();
-    document.getElementById("customerName").value="";
-    document.getElementById("customerPhone").value="";
-    document.getElementById("customerAddress").value="";
+
+    document.getElementById("customerName").value = "";
+    document.getElementById("customerPhone").value = "";
+    document.getElementById("customerAddress").value = "";
 
     setTimeout(()=>{
       closeOrder();
-      document.getElementById("cartPanel").style.display="none";
+      document.getElementById("cartPanel").style.display = "none";
     },1800);
 
   }catch(error){
-    message.textContent="Xatolik: "+error.message;
+    console.error("Buyurtma xatosi:",error);
+    message.textContent = "Xatolik: " + error.message;
   }
 }
 
